@@ -44,10 +44,28 @@ class _ReservationMapScreenState extends State<ReservationMapScreen> {
   @override
   void initState() {
     super.initState();
-    _simulatedDay = _dartWeekdayToSun0(DateTime.now().weekday);
-    _selectedDate = DateTime(2026, 3, 10);
+    final now = DateTime.now();
+    // Antigravity Modification: Initialized with today's real date instead of a hardcoded 2026 date.
+    _simulatedDay = _dartWeekdayToSun0(now.weekday);
+    _selectedDate = now;
     AiStudyController.instance.addListener(_onAiControllerChanged);
     _consumePendingAiPrefill();
+  }
+
+  /// Antigravity Modification: Helper to link the Top Day Menu with the Calendar Date.
+  /// When a day is selected, it calculates the corresponding calendar date.
+  void _updateSimulatedDay(int dayIndex) {
+    final now = DateTime.now();
+    final currentSun0 = _dartWeekdayToSun0(now.weekday);
+    int diff = dayIndex - currentSun0;
+    // We don't want to go back in time for the selected date
+    if (diff < 0) diff += 7;
+    
+    setState(() {
+      _simulatedDay = dayIndex;
+      _selectedDate = now.add(Duration(days: diff));
+    });
+    _reloadWorkspacesFromServer();
   }
 
   @override
@@ -483,12 +501,8 @@ class _ReservationMapScreenState extends State<ReservationMapScreen> {
             _DayMenu(
               currentLabel: _currentDayName,
               selectedIndex: _simulatedDay,
-              onSelect: (i) {
-                setState(() => _simulatedDay = i);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Demo day: ${_kDayNames[i]}')),
-                );
-              },
+              // Antigravity Modification: Now calls the helper to sync date with day label.
+              onSelect: _updateSimulatedDay,
             ),
           ],
         ),
@@ -872,7 +886,11 @@ class _ReservationMapScreenState extends State<ReservationMapScreen> {
                                 lastDate: DateTime(2027, 12, 31),
                               );
                               if (d != null) {
-                                setState(() => _selectedDate = d);
+                                setState(() {
+                                  _selectedDate = d;
+                                  // Antigravity Modification: Sync the Top Day Menu label when a calendar date is picked.
+                                  _simulatedDay = _dartWeekdayToSun0(d.weekday);
+                                });
                                 _reloadWorkspacesFromServer();
                               }
                             },
