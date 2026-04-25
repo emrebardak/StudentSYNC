@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/network/dashboard_api.dart';
+import '../../../core/trust/responsibility_ledger.dart';
 import '../../reservation/data/reservation_api.dart';
 import '../../reservation/domain/reservation_models.dart';
 import '../data/bookings_mock_data.dart';
@@ -16,6 +18,7 @@ class MyBookingsScreen extends StatefulWidget {
 
 class _MyBookingsScreenState extends State<MyBookingsScreen> {
   final _api = ReservationApi();
+  final _dashboardApi = DashboardApi();
 
   List<ReservationDetail> _all = [];
   final Set<String> _demoCheckedInIds = <String>{};
@@ -123,12 +126,25 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
         cancelledAt: DateTime.now(),
         slotStartAt: start,
       );
+      await _syncResponsibilityFromDashboard();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cancellation sent')));
       await _load();
     } on DioException {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cancel request failed')));
+    }
+  }
+
+  Future<void> _syncResponsibilityFromDashboard() async {
+    try {
+      final dashboard = await _dashboardApi.getHome();
+      final scoreRaw = dashboard['responsibilityScore'];
+      if (scoreRaw is num) {
+        ResponsibilityLedger.instance.setHomeContext(mockOnly: scoreRaw.toInt());
+      }
+    } catch (_) {
+      // Keep current local score if dashboard refresh fails.
     }
   }
 

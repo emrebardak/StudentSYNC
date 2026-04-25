@@ -3,8 +3,10 @@
 package com.studysync.config;
 
 import com.studysync.security.JwtAuthenticationFilter;
+import org.springframework.http.HttpMethod;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -21,10 +23,13 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         // Public endpoints: auth + health + reference catalogs + error/H2. All other API endpoints require JWT.
         http.csrf(csrf -> csrf.disable())
+                .cors(Customizer.withDefaults())
                 .headers(h -> h.frameOptions(frame -> frame.sameOrigin()))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(
-                        auth -> auth.requestMatchers(
+                        auth -> auth.requestMatchers(HttpMethod.OPTIONS, "/**")
+                                .permitAll()
+                                .requestMatchers(
                                         "/h2-console/**",
                                         "/api/v1/auth/**",
                                         "/api/v1/health",

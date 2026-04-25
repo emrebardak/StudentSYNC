@@ -50,9 +50,11 @@ class _HomeScreenState extends State<HomeScreen> {
       final d = await DashboardApi().getHome();
       final quickStats = d['quickStats'];
       final upcomingRaw = d['upcomingReservations'];
+      final apiScoreRaw = d['responsibilityScore'];
       if (!mounted) return;
       setState(() {
-        ResponsibilityLedger.instance.setHomeContext(mockOnly: HomeMockData.responsibilityScore);
+        final apiScore = apiScoreRaw is num ? apiScoreRaw.toInt() : HomeMockData.responsibilityScore;
+        ResponsibilityLedger.instance.setHomeContext(mockOnly: apiScore);
         if (quickStats is Map<String, dynamic>) {
           final total = quickStats['totalReservations'];
           final active = quickStats['activeToday'];
@@ -76,6 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     } catch (_) {
       setState(() {
+        ResponsibilityLedger.instance.setHomeContext(mockOnly: HomeMockData.responsibilityScore);
         _apiUpcomingReservations = HomeMockData.upcomingReservations;
       });
     }
