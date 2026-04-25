@@ -56,7 +56,7 @@ public class UserAccount implements UserDetails {
     private Integer year;
 
     @Column(name = "responsibility_score")
-    private Integer responsibilityScore = 100;
+    private Integer responsibilityScore = 75;
 
     // Antigravity Modification: Changed constructor from protected to public to fix compilation visibility errors
     public UserAccount() {}

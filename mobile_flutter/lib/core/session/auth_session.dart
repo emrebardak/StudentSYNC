@@ -11,6 +11,7 @@ class AuthSession {
   String? userEmail;
   String? userDepartment;
   int? userYear;
+  int? userScore;
 
   void clear() {
     accessToken = null;

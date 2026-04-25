@@ -98,11 +98,28 @@ public class ReservationService {
         UserAccount user = (UserAccount) principal;
         Long defaultUserId = user.getId();
 
-        // Validation: Quota validation (Max 2 reservations per day)
+        // 2. Validation: Advance Booking Window (Mon/Fri Rule)
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.LocalDate targetDate = java.time.LocalDate.parse(request.date());
+        
+        if (targetDate.isAfter(today)) {
+            java.time.DayOfWeek todayDay = today.getDayOfWeek();
+            boolean isMonday = todayDay == java.time.DayOfWeek.MONDAY;
+            boolean isFriday = todayDay == java.time.DayOfWeek.FRIDAY;
+            
+            if (!isMonday && !isFriday) {
+                throw new IllegalStateException("Advance booking is only allowed on Mondays and Fridays.");
+            }
+        }
+
+        // 3. Validation: Quota validation (Dynamic limit based on score)
+        int dailyLimit = user.getResponsibilityScore() > 75 ? 3 : 2;
         int dailyReservations = reservationRepository.countByUser_IdAndDateAndStatusIn(
                 defaultUserId, request.date(), List.of("ACTIVE", "PENDING", "COMPLETED"));
-        if (dailyReservations >= 2) {
-            throw new IllegalStateException("Daily limit reached. You can only make 2 reservations per day.");
+        
+        if (dailyReservations >= dailyLimit) {
+            throw new IllegalStateException("Daily limit reached. With your score of " + 
+                user.getResponsibilityScore() + ", you can make " + dailyLimit + " reservations per day.");
         }
 
         // Map and Save

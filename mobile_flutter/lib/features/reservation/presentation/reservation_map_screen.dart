@@ -93,9 +93,20 @@ class _ReservationMapScreenState extends State<ReservationMapScreen> {
     return dartWeekday;
   }
 
-  bool get _isMonday => _simulatedDay == 1;
-  bool get _isFriday => _simulatedDay == 5;
-  bool get _canReserveAdvance => _isMonday || _isFriday;
+  bool get _canReserveAdvance {
+    final now = DateTime.now();
+    final todaySun0 = _dartWeekdayToSun0(now.weekday);
+    final isTodayMonday = todaySun0 == 1;
+    final isTodayFriday = todaySun0 == 5;
+
+    // Rule: On Monday/Friday, you can reserve for any day (advance booking window).
+    if (isTodayMonday || isTodayFriday) return true;
+
+    // Rule: Other days (Tue, Wed, Thu) can ONLY reserve for the current calendar day.
+    final selectedIso = _selectedDateIso;
+    final todayIso = DateTime(now.year, now.month, now.day).toString().split(' ').first;
+    return selectedIso == todayIso;
+  }
 
   String get _currentDayName => _kDayNames[_simulatedDay];
 
@@ -165,7 +176,7 @@ class _ReservationMapScreenState extends State<ReservationMapScreen> {
   bool _isInstantDesk(String id) => ReservationMockData.instantDeskIds.contains(id);
 
   /// Non–Mon/Fri: map highlights only cells that are instant id + actually free.
-  bool get _isInstantMapMode => !_canReserveAdvance;
+  bool get _isInstantMapMode => false; // Always allow interaction to let backend handle rules
 
   bool _isInstantBookableCell(Workspace ws) {
     if (!ReservationMockData.instantDeskIds.contains(ws.id)) return false;
@@ -419,8 +430,7 @@ class _ReservationMapScreenState extends State<ReservationMapScreen> {
   bool get _instantLocked =>
       _selectedWorkspaceId != null && _isInstantDesk(_selectedWorkspaceId!);
 
-  bool get _showConfirmButton =>
-      _canReserveAdvance || (_selectedWorkspaceId != null && _isInstantDesk(_selectedWorkspaceId!));
+  bool get _showConfirmButton => _selectedWorkspaceId != null;
 
   void _applyAiPrefill(ReservePrefill p) {
     final d = DateTime.tryParse(p.dateIso);
@@ -1185,9 +1195,13 @@ class _ReservationMapScreenState extends State<ReservationMapScreen> {
 
   Widget _policyBanner() {
     String title;
-    if (_isMonday) {
-      title = 'Monday: reserve Tue–Fri';
-    } else if (_isFriday) {
+    final today = DateTime.now();
+    final isMon = today.weekday == DateTime.monday;
+    final isFri = today.weekday == DateTime.friday;
+
+    if (isMon) {
+      title = 'Monday: reserve for whole week';
+    } else if (isFri) {
       title = 'Friday: reserve Sat–Mon';
     } else {
       title = '$_currentDayName: instant booking only';

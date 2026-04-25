@@ -24,6 +24,8 @@ class AuthController extends ChangeNotifier {
       session.userDepartment = user['department']?.toString();
       final yearVal = user['year'];
       session.userYear = yearVal is num ? yearVal.toInt() : int.tryParse(yearVal?.toString() ?? '');
+      final scoreVal = user['responsibilityScore'];
+      session.userScore = scoreVal is num ? scoreVal.toInt() : int.tryParse(scoreVal?.toString() ?? '');
     }
     if (!_isLoggedIn) {
       _isLoggedIn = true;
