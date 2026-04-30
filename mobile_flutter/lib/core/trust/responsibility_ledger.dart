@@ -17,6 +17,10 @@ class ResponsibilityLedger extends ChangeNotifier {
   int _listingsThisSession = 0;
   int _reservationsThisSession = 0;
 
+  /// Tracks which user the current session counters belong to.
+  /// When a different user logs in, counters are reset.
+  String? _activeUserId;
+
   static const int scoreCostPerBuddyListing = 1;
 
   /// Only for buddy posts — don’t let listing cost pull mock user into a weird band in one tap.
@@ -26,6 +30,18 @@ class ResponsibilityLedger extends ChangeNotifier {
   /// `responsibilityScore` (real DB, e.g. 100) is not applied to this ledger.
   void setHomeContext({required int mockOnly}) {
     _mockFallback = mockOnly;
+    notifyListeners();
+  }
+
+  /// Called on every successful login. If [userId] differs from the previously
+  /// active user, all per-session counters are reset so that one user's usage
+  /// does not bleed into another user's session on the same device.
+  void resetForUser(String userId) {
+    if (_activeUserId == userId) return; // same user, keep existing session state
+    _activeUserId = userId;
+    _reservationsThisSession = 0;
+    _listingsThisSession = 0;
+    _listingDelta = 0;
     notifyListeners();
   }
 
@@ -52,7 +68,8 @@ class ResponsibilityLedger extends ChangeNotifier {
 
   String reserveDemoBannerLine() {
     final s = effectiveScore;
-    return 'Score $s — up to $maxDemoActionsPerSession reservations this session (demo quota).';
+    final limit = s < 75 ? 2 : 3;
+    return 'Score $s — up to $limit reservations per day (enforced by server).';
   }
 
   String buddyDemoLine() {
@@ -68,12 +85,9 @@ class ResponsibilityLedger extends ChangeNotifier {
       _listingsThisSession < maxBuddyListingsPerSession &&
       (_base + _listingDelta) >= scoreCostPerBuddyListing;
 
-  /// **No score-based hard block** for reserving — only session quota (demo-friendly).
+  /// **No score-based hard block locally** for reserving.
+  /// Enforced dynamically per user on the backend.
   String? canAttemptReservation() {
-    final cap = maxReservationsThisSessionForScore();
-    if (_reservationsThisSession >= cap) {
-      return 'Demo: $cap reservation(s) per session; restart the app to reset the counter.';
-    }
     return null;
   }
 

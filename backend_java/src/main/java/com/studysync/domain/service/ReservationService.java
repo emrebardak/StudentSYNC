@@ -101,25 +101,25 @@ public class ReservationService {
         // 2. Validation: Advance Booking Window (Mon/Fri Rule)
         java.time.LocalDate today = java.time.LocalDate.now();
         java.time.LocalDate targetDate = java.time.LocalDate.parse(request.date());
-        
+
         if (targetDate.isAfter(today)) {
             java.time.DayOfWeek todayDay = today.getDayOfWeek();
             boolean isMonday = todayDay == java.time.DayOfWeek.MONDAY;
             boolean isFriday = todayDay == java.time.DayOfWeek.FRIDAY;
-            
+
             if (!isMonday && !isFriday) {
                 throw new IllegalStateException("Advance booking is only allowed on Mondays and Fridays.");
             }
         }
 
         // 3. Validation: Quota validation (Dynamic limit based on score)
-        int dailyLimit = user.getResponsibilityScore() > 75 ? 3 : 2;
+        int dailyLimit = user.getResponsibilityScore() < 75 ? 2 : 3;
         int dailyReservations = reservationRepository.countByUser_IdAndDateAndStatusIn(
                 defaultUserId, request.date(), List.of("ACTIVE", "PENDING", "COMPLETED"));
-        
+
         if (dailyReservations >= dailyLimit) {
-            throw new IllegalStateException("Daily limit reached. With your score of " + 
-                user.getResponsibilityScore() + ", you can make " + dailyLimit + " reservations per day.");
+            throw new IllegalStateException("Daily limit reached. With your score of " +
+                    user.getResponsibilityScore() + ", you can make " + dailyLimit + " reservations per day.");
         }
 
         // Map and Save
@@ -128,8 +128,9 @@ public class ReservationService {
         record.setWorkspaceId(request.workspaceId());
         record.setDate(request.date());
         record.setSlotId(request.slotId());
-        
-        // Antigravity Modification: Use actual time ranges for labels as requested by user.
+
+        // Antigravity Modification: Use actual time ranges for labels as requested by
+        // user.
         String label = switch (request.slotId()) {
             case "slot-1" -> "06.00-09.00";
             case "slot-2" -> "09.00-11.00";
@@ -201,20 +202,22 @@ public class ReservationService {
         record.setStatus("CANCELLED");
         reservationRepository.saveAndFlush(record);
 
-        // Antigravity Modification: Enforce history limit (max 10 completed/cancelled elements)
+        // Antigravity Modification: Enforce history limit (max 10 completed/cancelled
+        // elements)
         Long userId = record.getUser().getId();
         java.util.List<String> historyStatuses = java.util.List.of("COMPLETED", "CANCELLED");
         long historyCount = reservationRepository.countByUser_IdAndStatusIn(userId, historyStatuses);
-        
+
         if (historyCount > 10) {
             long itemsToDelete = historyCount - 10;
-            // Find oldest history items by ID (First In First Out), but EXCLUDE the one we just cancelled
+            // Find oldest history items by ID (First In First Out), but EXCLUDE the one we
+            // just cancelled
             java.util.List<ReservationRecord> oldestItems = reservationRepository
-                .findByUser_IdAndStatusInOrderByIdAsc(userId, historyStatuses)
-                .stream()
-                .filter(r -> !r.getId().equals(record.getId()))
-                .collect(java.util.stream.Collectors.toList());
-            
+                    .findByUser_IdAndStatusInOrderByIdAsc(userId, historyStatuses)
+                    .stream()
+                    .filter(r -> !r.getId().equals(record.getId()))
+                    .collect(java.util.stream.Collectors.toList());
+
             for (int i = 0; i < Math.min(itemsToDelete, oldestItems.size()); i++) {
                 reservationRepository.delete(oldestItems.get(i));
             }

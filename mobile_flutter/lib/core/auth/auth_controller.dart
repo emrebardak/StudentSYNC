@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../features/auth/data/auth_api.dart';
 import '../session/auth_session.dart';
+import '../trust/responsibility_ledger.dart';
 
 class AuthController extends ChangeNotifier {
   bool _isLoggedIn = false; // _ is used to make the variable private.
@@ -17,6 +18,10 @@ class AuthController extends ChangeNotifier {
     session.accessToken = accessToken;
     session.refreshToken = refreshToken;
     _updateSessionFromMap(user);
+    // Reset per-session ledger counters when the active user changes,
+    // so the daily limit is per-user, not per-device.
+    final uid = AuthSession.instance.userId;
+    if (uid != null) ResponsibilityLedger.instance.resetForUser(uid);
     if (!_isLoggedIn) {
       _isLoggedIn = true;
     }

@@ -56,9 +56,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String _buildNickname(String firstName, String lastName) {
     final first = firstName.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
     final last = lastName.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-    if (first.isEmpty) return 'student';
-    if (last.isEmpty) return first;
-    return '${first}_${last[0]}';
+    final number = (1000 + Random().nextInt(9000)).toString();
+    if (first.isEmpty) return 'student_$number';
+    if (last.isEmpty) return '${first}_$number';
+    return '${first}_${last}_$number';
   }
 
   Future<void> _showKeyboardAfterFocus(FocusNode node) async {
